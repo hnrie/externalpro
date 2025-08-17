@@ -24,15 +24,21 @@ namespace globals
     inline float walk_speed = 16.0f;
     inline float jump_power = 50.0f;
     inline bool sitting = false;
+    inline float gravity = 196.2f;
+
+    inline bool highlight = true;
+    inline float highlight_intensity = 0.2;
 
     inline Vector3 position(0, 0, 0);
     inline bool set_position = false;
+    inline int fps = 240;
+    inline bool lock_fps = false;
 
     namespace esp
     {
         // i have not made the esp stuff only player stuff and the overlay and the fov settings.
-        inline bool show_fov = true;
-        inline bool esp_enabled = false;
+        inline bool show_fov = false;
+        inline bool esp_enabled = true;
         inline bool esp_names = false;
         inline bool esp_boxes = false;
         inline bool esp_health = false;

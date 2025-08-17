@@ -177,6 +177,69 @@ POINT get_mouse_pos(HWND overlay_window)
     return pt;
 }
 
+instance selected_instance;
+
+void render_dex(const instance& inst, bool highlight = false) {
+    if (!globals::highlight)
+        highlight = false;
+
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow
+        | ImGuiTreeNodeFlags_SpanAvailWidth
+        | ImGuiTreeNodeFlags_FramePadding;
+
+    if (inst.children().empty())
+        node_flags |= ImGuiTreeNodeFlags_Leaf;
+
+    if (highlight)
+        node_flags |= ImGuiTreeNodeFlags_Selected;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6, 3));
+
+    if (highlight) {
+        ImVec4 subtle = ImGui::GetStyleColorVec4(ImGuiCol_Header);
+        subtle.w = globals::highlight_intensity;
+        ImGui::PushStyleColor(ImGuiCol_Header, subtle);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, subtle);
+        ImGui::PushStyleColor(ImGuiCol_HeaderActive, subtle);
+    }
+
+    bool node_open = ImGui::TreeNodeEx(
+        (void*)(intptr_t)inst.address,
+        node_flags,
+        "%s  [%s]",
+        inst.name().c_str(),
+        inst.class_name().c_str()
+    );
+
+    if (highlight)
+        ImGui::PopStyleColor(3);
+
+    ImGui::PopStyleVar();
+
+    bool hovered = ImGui::IsItemHovered();
+
+    if (ImGui::IsItemClicked())
+        selected_instance = inst;
+
+    if (node_open) {
+        for (const auto& child : inst.children()) {
+            render_dex(child, globals::highlight && (hovered || highlight));
+        }
+        ImGui::TreePop();
+    }
+}
+
+int get_refresh_rate()
+{
+    DEVMODE dev_mode = {};
+    dev_mode.dmSize = sizeof(dev_mode);
+
+    if (EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &dev_mode))
+        return dev_mode.dmDisplayFrequency;
+
+    return 0;
+}
+
 bool overlay_manager::initialize_overlay()
 {
     ImGui_ImplWin32_EnableDpiAwareness();
@@ -232,7 +295,6 @@ bool overlay_manager::initialize_overlay()
 
     bool done = false;
     bool show_ui = true;
-    static bool show_fov = true;
 
     while (!done)
     {
@@ -316,7 +378,7 @@ bool overlay_manager::initialize_overlay()
             {
                 if (ImGui::BeginTabItem("esp"))
                 {
-                    ImGui::Text("ESP Settings");
+                    /*ImGui::Text("ESP Settings");
                     ImGui::Checkbox("Enable ESP", &globals::esp::esp_enabled);
                     ImGui::Checkbox("Show Names", &globals::esp::esp_names);
                     ImGui::Checkbox("Show Boxes", &globals::esp::esp_boxes);
@@ -324,11 +386,11 @@ bool overlay_manager::initialize_overlay()
                     ImGui::Checkbox("Show Distance", &globals::esp::esp_distance);
                     ImGui::SliderFloat("ESP Max Distance", &globals::esp::esp_max_distance, 0.f, 5000.f);
                     ImGui::ColorEdit4("ESP Box Color", (float*)&globals::esp::esp_box_color);
-                    ImGui::ColorEdit4("ESP Name Color", (float*)&globals::esp::esp_name_color);
+                    ImGui::ColorEdit4("ESP Name Color", (float*)&globals::esp::esp_name_color);*/
                     ImGui::Text("FOV Settings");
-                    ImGui::Checkbox("Show FOV Circle", &show_fov);
+                    ImGui::Checkbox("Show FOV Circle", &globals::esp::show_fov);
                     ImGui::SliderFloat("FOV Size", &globals::esp::fov_size, 10.0f, 900.0f);
-                    if (show_fov)
+                    if (globals::esp::show_fov)
                     {
                         ImGui::ColorEdit4("FOV Circle Color", (float*)&globals::esp::fov_circle_color);
                         ImGui::Checkbox("FOV Strobe", &globals::esp::fov_strobe);
@@ -345,11 +407,36 @@ bool overlay_manager::initialize_overlay()
                 {
                     ImGui::SliderFloat("JumpPower", &globals::jump_power, 16.0f, 1000.0f);
                     ImGui::SliderFloat("WalkSpeed", &globals::walk_speed, 50.0f, 320.0f);
+                    ImGui::SliderFloat("Gravity", &globals::gravity, 0.0f, 2000.0f);
+                    if (ImGui::Button("Reset Gravity"))
+                        globals::gravity = 196.2f;
                     ImGui::Checkbox("Sitting", &globals::sitting);
                     ImGui::InputFloat3("Position", &globals::position.x);
                     if (ImGui::Button("Set Position"))
                         globals::set_position = true;
                     ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("explorer")) {
+                    ImGui::Text("dex explorer");
+                    ImGui::Separator();
+                    render_dex(instance(globals::datamodel));
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("settings")) {
+                    ImGui::Text("Explorer Settings");
+                    ImGui::Checkbox("Group Highlight", &globals::highlight);
+                    ImGui::SliderFloat("Group Highlight Intensity", &globals::highlight_intensity, 0.01f, 1.0f);
+
+                    ImGui::Text("FPS Settings");
+                    if (ImGui::Checkbox("Lock FPS To Screen HZ", &globals::lock_fps)) {
+                        if (globals::lock_fps)
+                            globals::fps = get_refresh_rate();
+                    }
+
+                    if (!globals::lock_fps)
+                        ImGui::SliderInt("FPS Cap", &globals::fps, 1, 240);
                 }
 
                 ImGui::EndTabBar();
@@ -363,7 +450,7 @@ bool overlay_manager::initialize_overlay()
         drawing_manager drawing;
         drawing.begin();
 
-        if (globals::esp::esp_enabled && show_fov)
+        if (globals::esp::esp_enabled && globals::esp::show_fov)
         {
             ImVec4 fov_color = ImColor(globals::esp::fov_circle_color);
             fov_color.w = 1 - globals::esp::fov_transparency;

@@ -32,6 +32,7 @@ public:
     uintptr_t primitive() const;
     Vector3 position() const;
     void set_position(Vector3 position) const;
+    void set_gravity(float gravity) const;
 };
 
 class player {
@@ -60,6 +61,7 @@ public:
     uintptr_t humanoid;
     uintptr_t main;
 
+    uintptr_t primitive() const;
     void set_walkspeed(float value) const;
     void set_jumppower(float value) const;
     void set_sitting(bool value) const;

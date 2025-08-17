@@ -52,8 +52,6 @@ int main()
 
     std::thread(&overlay_manager::initialize_overlay, overlay_instance.get()).detach();
 
-    start:
-
     while (true)
     {
         auto shit = get_datamodel();
@@ -61,34 +59,22 @@ int main()
         auto players = shit.players;
         auto workspace = shit.workspace;
 
-        if (datamodel.name() == "LuaApp") goto start;
+        if (datamodel.name() == "LuaApp") continue;
 
         globals::player_list.clear();
 
         instance player_ptr = instance(memory::read<uintptr_t>(players.address + offsets::local_player));
         player player_info = random_shit::get_player_info(player_ptr);
 
-        std::vector<instance> characters = random_shit::get_characters(workspace);
-        for (const auto& character : characters)
-        {
-            instance other_player_instance = players.find_first_child(character.name());
-            player other_player_info = random_shit::get_player_info(other_player_instance);
-
-            std::string display_name = "";
-
-            if (other_player_info.displayname != other_player_info.name || !other_player_info.displayname.empty())
-                display_name = other_player_info.displayname;
-
-            globals::player_list.push_back({ character.name(), display_name, instance(other_player_info.hrp).position() });
-        }
-
         if (globals::set_position) {
             instance(player_info.hrp).set_position(globals::position); 
             globals::set_position = false;
         }
+        instance(player_info.hrp).set_gravity(globals::gravity);
         player_info.set_walkspeed(globals::walk_speed);
         player_info.set_jumppower(globals::jump_power);
         player_info.set_sitting(globals::sitting);
+        memory::write<int32_t>(globals::base + offsets::ts_max_fps, globals::fps);
     }
 
     CloseHandle(globals::handle);

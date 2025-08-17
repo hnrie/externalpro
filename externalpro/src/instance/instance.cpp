@@ -2,20 +2,12 @@
 
 std::string instance::name() const {
     const auto ptr = memory::read<uintptr_t>(address + offsets::name);
-
-    if (memory::decode_string(ptr).empty())
-        return memory::read_string(ptr);
-    else
-        return memory::decode_string(ptr);
+    return memory::get_string(ptr);
 }
 
 std::string instance::display_name() const {
     const auto ptr = memory::read<uintptr_t>(address + offsets::display_name);
-
-    if (memory::decode_string(ptr).empty())
-        return memory::read_string(ptr);
-    else
-        return memory::decode_string(ptr);
+    return memory::get_string(ptr);
 }
 
 instance instance::parent() const {
@@ -36,7 +28,7 @@ std::vector<instance> instance::children() const {
 
 instance instance::find_first_child(const std::string& childname) const {
     for (const instance& child : children()) {
-        if (child.name() == childname || memory::decode_string(memory::read<uintptr_t>(child.address + offsets::name)) == childname) {
+        if (child.name() == childname) {
             return child;
         }
     }
@@ -45,7 +37,7 @@ instance instance::find_first_child(const std::string& childname) const {
 
 instance instance::find_first_descendant(const std::string& target_name) const {
     for (const auto& child : children()) {
-        if (child.name() == target_name || memory::decode_string(memory::read<uintptr_t>(child.address + offsets::name)) == target_name)
+        if (child.name() == target_name)
             return child;
 
         const instance nested = child.find_first_descendant(target_name);
@@ -56,7 +48,7 @@ instance instance::find_first_descendant(const std::string& target_name) const {
 }
 
 std::string instance::class_name() const {
-    return memory::read_string(memory::read<uintptr_t>(address + offsets::class_descriptor));
+    return memory::get_string(memory::read<uintptr_t>(memory::read<uintptr_t>(address + offsets::class_descriptor) + 0x8));
 }
 
 bool instance::isa(const std::string& class_name) const {
@@ -157,7 +149,15 @@ void instance::set_position(Vector3 position) const {
     memory::write<Vector3>(primitive() + offsets::position, position);
 }
 
+void instance::set_gravity(float gravity) const {
+    memory::write<float>(primitive() + offsets::primitive_gravity, gravity);
+}
+
 // player shit
+
+uintptr_t player::primitive() const {
+    return memory::read<uintptr_t>(address + offsets::primitive);
+}
 
 void player::set_walkspeed(float value) const {
     memory::write<float>(instance(humanoid).address + offsets::walk_speed, value);

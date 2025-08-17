@@ -30,5 +30,5 @@ namespace memory
     }
 
     std::string read_string(uintptr_t address);
-    std::string decode_string(uintptr_t string_ptr);
+    std::string get_string(uintptr_t string_ptr);
 }

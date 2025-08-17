@@ -14,10 +14,10 @@ std::string memory::read_string(uintptr_t address)
     return result;
 }
 
-std::string memory::decode_string(uintptr_t string_ptr)
+std::string memory::get_string(uintptr_t string_ptr)
 {
-    uintptr_t data_ptr = read<uintptr_t>(string_ptr);
-    int length = read<int>(string_ptr + 0x8);
-    (void)length;
-    return read_string(data_ptr);
+    int length = read<int>(string_ptr + 0x18);
+    if (length >= 16u)
+        return read_string(read<std::uintptr_t>(string_ptr));
+    return read_string(string_ptr);
 }
