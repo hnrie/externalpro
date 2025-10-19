@@ -36,7 +36,9 @@ namespace globals
 
     namespace esp
     {
-        // i have not made the esp stuff only player stuff and the overlay and the fov settings.
+        inline bool enabled = false;
+        inline bool aimbot_enabled = false;
+        inline player_info target;
         inline bool show_fov = false;
         inline bool esp_enabled = true;
         inline bool esp_names = false;

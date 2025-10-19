@@ -2,6 +2,33 @@
 #include "string"
 #include "../instance/instance.hpp"
 
+#include <DirectXMath.h>
+
+using namespace DirectX;
+
+Vector2 WorldToScreen(const Vector3& world_pos, const Matrix4& view_matrix, int screen_width, int screen_height)
+{
+    Vector4 clip_coords;
+    clip_coords.x = world_pos.x * view_matrix.m[0][0] + world_pos.y * view_matrix.m[1][0] + world_pos.z * view_matrix.m[2][0] + view_matrix.m[3][0];
+    clip_coords.y = world_pos.x * view_matrix.m[0][1] + world_pos.y * view_matrix.m[1][1] + world_pos.z * view_matrix.m[2][1] + view_matrix.m[3][1];
+    clip_coords.z = world_pos.x * view_matrix.m[0][2] + world_pos.y * view_matrix.m[1][2] + world_pos.z * view_matrix.m[2][2] + view_matrix.m[3][2];
+    clip_coords.w = world_pos.x * view_matrix.m[0][3] + world_pos.y * view_matrix.m[1][3] + world_pos.z * view_matrix.m[2][3] + view_matrix.m[3][3];
+
+    if (clip_coords.w < 0.1f)
+        return Vector2(-1, -1);
+
+    Vector3 ndc;
+    ndc.x = clip_coords.x / clip_coords.w;
+    ndc.y = clip_coords.y / clip_coords.w;
+    ndc.z = clip_coords.z / clip_coords.w;
+
+    Vector2 screen_pos;
+    screen_pos.x = (screen_width / 2.0f * ndc.x) + (screen_width / 2.0f);
+    screen_pos.y = -(screen_height / 2.0f * ndc.y) + (screen_height / 2.0f);
+
+    return screen_pos;
+}
+
 bool overlay_manager::create_d3d_device(HWND window_handle)
 {
     DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
@@ -402,6 +429,12 @@ bool overlay_manager::initialize_overlay()
                     }
                     ImGui::EndTabItem();
                 }
+                if (ImGui::BeginTabItem("Aimbot"))
+                {
+                    ImGui::Checkbox("ESP Enabled", &globals::esp::enabled);
+                    ImGui::Checkbox("Aimbot Enabled", &globals::esp::aimbot_enabled);
+                    ImGui::EndTabItem();
+                }
 
                 if (ImGui::BeginTabItem("local player"))
                 {
@@ -449,6 +482,66 @@ bool overlay_manager::initialize_overlay()
 
         drawing_manager drawing;
         drawing.begin();
+
+        if (globals::esp::enabled)
+        {
+            auto local_player = instance(globals::players).find_first_child_of_class("Player");
+            auto camera = instance(globals::workspace).find_first_descendant_of_class("Camera");
+
+            if (local_player.address && camera.address)
+            {
+                Matrix4 view_matrix = memory::read<Matrix4>(camera.address + offsets::view_matrix);
+                RECT rect{};
+                GetClientRect(overlay_window, &rect);
+                int screen_width = rect.right - rect.left;
+                int screen_height = rect.bottom - rect.top;
+
+                float closest_distance = FLT_MAX;
+                player_info closest_player;
+
+                for (const auto& player : instance(globals::players).get_children())
+                {
+                    if (player.address == local_player.address) continue;
+
+                    auto character = player.find_first_child_of_class("Model");
+                    if (!character.address) continue;
+
+                    auto hrp = character.find_first_child("HumanoidRootPart");
+                    if (!hrp.address) continue;
+
+                    Vector3 world_pos = hrp.position();
+                    Vector2 screen_pos = WorldToScreen(world_pos, view_matrix, screen_width, screen_height);
+
+                    if (screen_pos.x != -1 && screen_pos.y != -1)
+                    {
+                        drawing.add_square(screen_pos.x - 10, screen_pos.y - 10, screen_pos.x + 10, screen_pos.y + 10, ImColor(255, 0, 0));
+
+                        float distance = std::sqrt(std::pow(screen_pos.x - screen_width / 2, 2) + std::pow(screen_pos.y - screen_height / 2, 2));
+                        if (distance < closest_distance)
+                        {
+                            closest_distance = distance;
+                            closest_player = { player.name(), player.display_name(), world_pos };
+                        }
+                    }
+                }
+
+                if (globals::esp::aimbot_enabled && closest_distance != FLT_MAX)
+                {
+                    globals::esp::target = closest_player;
+                    Vector3 target_pos = globals::esp::target.position;
+
+                    Vector2 screen_pos = WorldToScreen(target_pos, view_matrix, screen_width, screen_height);
+
+                    if (screen_pos.x != -1 && screen_pos.y != -1)
+                    {
+                        float dx = screen_pos.x - screen_width / 2;
+                        float dy = screen_pos.y - screen_height / 2;
+
+                        mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0);
+                    }
+                }
+            }
+        }
 
         if (globals::esp::esp_enabled && globals::esp::show_fov)
         {

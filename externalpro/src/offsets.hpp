@@ -26,4 +26,8 @@ namespace offsets
 	const uintptr_t walk_speed_check = 0x3b8; // Offset to the walk speed check
 	const uintptr_t jump_power = 0x1b8;       // Offset to the jump power property
 	const uintptr_t sitting = 0x1e3;          // Offset to the sitting property
+
+	// Camera properties
+	const uintptr_t cframe = 0x1C0;           // Offset to the CFrame property
+	const uintptr_t view_matrix = 0x1C0;      // Offset to the view matrix
 }
