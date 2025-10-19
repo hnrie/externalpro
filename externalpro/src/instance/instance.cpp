@@ -18,9 +18,13 @@ std::vector<instance> instance::children() const {
     std::vector<instance> container;
 
     auto start = memory::read<uint64_t>(address + offsets::children);
+
+    if (!start)
+        return container;
+
     auto end = memory::read<uint64_t>(start + 0x8);
 
-    for (auto child = memory::read<uint64_t>(start); child != end; child += 0x10)
+    for (auto child = memory::read<uint64_t>(start); child < end; child += 0x8)
         container.emplace_back(memory::read<uint64_t>(child));
 
     return container;
