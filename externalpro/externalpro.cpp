@@ -98,7 +98,8 @@ int main()
         player_info.set_sitting(globals::sitting);
 
         // Update the maximum FPS
-        memory::write<int32_t>(globals::base + offsets::ts_max_fps, globals::fps);
+        uintptr_t ts = memory::read_module<uintptr_t>(offsets::ts_ptr);
+        memory::write<int32_t>(ts + offsets::ts_max_fps, globals::fps);
 
         // Sleep for a short duration to reduce CPU usage
         Sleep(1);
