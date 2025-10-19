@@ -12,7 +12,7 @@
 
 #pragma comment(lib, "d3d11.lib")
 
-#include "xorstr.hpp"
+#include "../../dependencies/xorstr.hpp"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
