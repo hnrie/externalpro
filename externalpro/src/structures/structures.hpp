@@ -1,4 +1,9 @@
 #pragma once
+#include <cmath>
+
+struct Matrix4 {
+	float m[4][4];
+};
 
 struct Vector3 final {
     float x, y, z;
