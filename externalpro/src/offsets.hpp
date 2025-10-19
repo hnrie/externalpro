@@ -27,6 +27,12 @@ namespace offsets
 	const uintptr_t walk_speed_check = 0x3A0; // WalkspeedCheck
 	const uintptr_t jump_power = 0x1B0;       // JumpPower
 	const uintptr_t sitting = 0x1e3;          // No new offset for sitting, keeping the old one.
+    const uintptr_t Health = 0x194;           // Health
+    const uintptr_t MaxHealth = 0x1B4;        // MaxHealth
+    const uintptr_t HipHeight = 0x1A0;        // HipHeight
+    const uintptr_t HumanoidState = 0x858;    // HumanoidState
+    const uintptr_t HumanoidStateID = 0x20;   // HumanoidStateID
+
 
 	// Camera properties
 	const uintptr_t cframe = 0x1C0;           // CFrame

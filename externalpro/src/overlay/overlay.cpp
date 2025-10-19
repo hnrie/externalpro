@@ -405,15 +405,17 @@ bool overlay_manager::initialize_overlay()
             {
                 if (ImGui::BeginTabItem("esp"))
                 {
-                    /*ImGui::Text("ESP Settings");
+                    ImGui::Text("ESP Settings");
                     ImGui::Checkbox("Enable ESP", &globals::esp::esp_enabled);
                     ImGui::Checkbox("Show Names", &globals::esp::esp_names);
                     ImGui::Checkbox("Show Boxes", &globals::esp::esp_boxes);
                     ImGui::Checkbox("Show Health", &globals::esp::esp_health);
+                    ImGui::Checkbox("Show Tracers", &globals::esp::esp_tracers);
                     ImGui::Checkbox("Show Distance", &globals::esp::esp_distance);
                     ImGui::SliderFloat("ESP Max Distance", &globals::esp::esp_max_distance, 0.f, 5000.f);
                     ImGui::ColorEdit4("ESP Box Color", (float*)&globals::esp::esp_box_color);
-                    ImGui::ColorEdit4("ESP Name Color", (float*)&globals::esp::esp_name_color);*/
+                    ImGui::ColorEdit4("ESP Name Color", (float*)&globals::esp::esp_name_color);
+                    ImGui::ColorEdit4("ESP Tracer Color", (float*)&globals::esp::esp_tracer_color);
                     ImGui::Text("FOV Settings");
                     ImGui::Checkbox("Show FOV Circle", &globals::esp::show_fov);
                     ImGui::SliderFloat("FOV Size", &globals::esp::fov_size, 10.0f, 900.0f);
@@ -435,6 +437,24 @@ bool overlay_manager::initialize_overlay()
                     ImGui::Checkbox("Aimbot Enabled", &globals::esp::aimbot_enabled);
                     ImGui::EndTabItem();
                 }
+                if (ImGui::BeginTabItem("World"))
+                {
+                    ImGui::Text("World Settings");
+                    ImGui::Checkbox("Wallhack", &globals::wallhack_enabled);
+                    ImGui::SliderFloat("Wallhack Transparency", &globals::wallhack_transparency, 0.f, 1.f);
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Environment"))
+                {
+                    ImGui::Text("Lighting Settings");
+                    ImGui::SliderFloat("Time of Day", &globals::time_of_day, 0.f, 24.f);
+                    ImGui::SliderFloat("Brightness", &globals::brightness, 0.f, 10.f);
+                    ImGui::ColorEdit3("Ambient", (float*)&globals::ambient);
+                    ImGui::SliderFloat("FogEnd", &globals::fog_end, 0.f, 100000.f);
+                    ImGui::SliderFloat("FogStart", &globals::fog_start, 0.f, 100000.f);
+                    ImGui::ColorEdit3("FogColor", (float*)&globals::fog_color);
+                    ImGui::EndTabItem();
+                }
 
                 if (ImGui::BeginTabItem("local player"))
                 {
@@ -447,6 +467,9 @@ bool overlay_manager::initialize_overlay()
                     ImGui::InputFloat3("Position", &globals::position.x);
                     if (ImGui::Button("Set Position"))
                         globals::set_position = true;
+
+                    ImGui::Checkbox("No-clip", &globals::noclip);
+                    ImGui::SliderFloat("HipHeight", &globals::hip_height, 0.f, 100.f);
                     ImGui::EndTabItem();
                 }
 
@@ -485,7 +508,8 @@ bool overlay_manager::initialize_overlay()
 
         if (globals::esp::enabled)
         {
-            auto local_player = instance(globals::players).find_first_child_of_class("Player");
+            auto local_player_ptr = memory::read<uintptr_t>(globals::players + offsets::local_player);
+            instance local_player(local_player_ptr);
             auto camera = instance(globals::workspace).find_first_descendant_of_class("Camera");
 
             if (local_player.address && camera.address)
@@ -514,7 +538,28 @@ bool overlay_manager::initialize_overlay()
 
                     if (screen_pos.x != -1 && screen_pos.y != -1)
                     {
-                        drawing.add_square(screen_pos.x - 10, screen_pos.y - 10, screen_pos.x + 10, screen_pos.y + 10, ImColor(255, 0, 0));
+                        if (globals::esp::esp_boxes)
+                            drawing.add_square(screen_pos.x - 10, screen_pos.y - 10, screen_pos.x + 10, screen_pos.y + 10, ImColor(globals::esp::esp_box_color));
+
+                        if (globals::esp::esp_names)
+                            drawing.add_text(screen_pos.x, screen_pos.y - 20, ImColor(globals::esp::esp_name_color), player.name().c_str());
+
+                        if (globals::esp::esp_tracers)
+                            drawing.add_line(screen_width / 2, screen_height, screen_pos.x, screen_pos.y, ImColor(globals::esp::esp_tracer_color));
+
+                        if (globals::esp::esp_health)
+                        {
+                            auto humanoid = character.find_first_child_of_class("Humanoid");
+                            if (humanoid.address)
+                            {
+                                float health = memory::read<float>(humanoid.address + offsets::Health);
+                                float max_health = memory::read<float>(humanoid.address + offsets::MaxHealth);
+                                float health_percent = health / max_health;
+
+                                drawing.add_square(screen_pos.x - 15, screen_pos.y - 10, screen_pos.x - 12, screen_pos.y + 10, ImColor(0, 0, 0));
+                                drawing.add_square(screen_pos.x - 15, screen_pos.y - 10 + (20 * (1 - health_percent)), screen_pos.x - 12, screen_pos.y + 10, ImColor(0, 255, 0));
+                            }
+                        }
 
                         float distance = std::sqrt(std::pow(screen_pos.x - screen_width / 2, 2) + std::pow(screen_pos.y - screen_height / 2, 2));
                         if (distance < closest_distance)

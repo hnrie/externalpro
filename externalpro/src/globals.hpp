@@ -34,6 +34,20 @@ namespace globals
     inline int fps = 240;
     inline bool lock_fps = false;
 
+    inline float time_of_day = 12.f;
+    inline float brightness = 2.f;
+    inline ImVec4 ambient = ImVec4(0.5f, 0.5f, 0.5f, 1.f);
+    inline float fog_end = 100000.f;
+    inline float fog_start = 0.f;
+    inline ImVec4 fog_color = ImVec4(0.5f, 0.5f, 0.5f, 1.f);
+
+    inline bool noclip = false;
+    inline float hip_height = 7.f;
+
+    inline bool wallhack_enabled = false;
+    inline float wallhack_transparency = 0.5f;
+    inline std::map<uintptr_t, float> original_transparencies;
+
     namespace esp
     {
         inline bool enabled = false;
@@ -41,12 +55,15 @@ namespace globals
         inline player_info target;
         inline bool show_fov = false;
         inline bool esp_enabled = true;
-        inline bool esp_names = false;
-        inline bool esp_boxes = false;
-        inline bool esp_health = false;
+        inline bool esp_names = true;
+        inline bool esp_boxes = true;
+        inline bool esp_health = true;
+        inline bool esp_tracers = true;
         inline bool esp_distance = false;
         inline bool fov_strobe = false;
         inline float esp_max_distance = 1000.0f;
+
+        inline ImVec4 esp_tracer_color = ImVec4(1.f, 1.f, 1.f, 1.f);
 
         inline int fov_segments = 50.0f;
         inline float fov_size = 90.0f;

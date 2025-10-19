@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <Psapi.h>
 #include <thread>
+#include <map>
 
 #include "src/instance/instance.hpp"
 #include "src/instance/randomshit.hpp"
@@ -97,9 +98,57 @@ int main()
         player_info.set_jumppower(globals::jump_power);
         player_info.set_sitting(globals::sitting);
 
+        // Apply noclip and hip height
+        if (player_info.humanoid) {
+            memory::write<float>(player_info.humanoid + offsets::HipHeight, globals::hip_height);
+            if (globals::noclip) {
+                auto humanoid_state = memory::read<uintptr_t>(player_info.humanoid + offsets::HumanoidState);
+                if(humanoid_state)
+                    memory::write<int>(humanoid_state + offsets::HumanoidStateID, 11);
+            }
+        }
+
         // Update the maximum FPS
         uintptr_t ts = memory::read_module<uintptr_t>(offsets::ts_ptr);
         memory::write<int32_t>(ts + offsets::ts_max_fps, globals::fps);
+
+        // Update environment
+        instance lighting = workspace.find_first_child("Lighting");
+        if (lighting.address)
+        {
+            memory::write<float>(lighting.address + offsets::ClockTime, globals::time_of_day);
+            memory::write<float>(lighting.address + offsets::Brightness, globals::brightness);
+            memory::write<Vector3>(lighting.address + offsets::Ambient, Vector3(globals::ambient.x, globals::ambient.y, globals::ambient.z));
+            memory::write<float>(lighting.address + offsets::FogEnd, globals::fog_end);
+            memory::write<float>(lighting.address + offsets::FogStart, globals::fog_start);
+            memory::write<Vector3>(lighting.address + offsets::FogColor, Vector3(globals::fog_color.x, globals::fog_color.y, globals::fog_color.z));
+        }
+
+        if (globals::wallhack_enabled)
+        {
+            if (globals::original_transparencies.empty())
+            {
+                for (const auto& part : workspace.get_descendants())
+                {
+                    if (part.isa("BasePart"))
+                    {
+                        globals::original_transparencies[part.address] = memory::read<float>(part.address + offsets::Transparency);
+                        memory::write<float>(part.address + offsets::Transparency, globals::wallhack_transparency);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (!globals::original_transparencies.empty())
+            {
+                for (const auto& pair : globals::original_transparencies)
+                {
+                    memory::write<float>(pair.first, pair.second);
+                }
+                globals::original_transparencies.clear();
+            }
+        }
 
         // Sleep for a short duration to reduce CPU usage
         Sleep(1);
